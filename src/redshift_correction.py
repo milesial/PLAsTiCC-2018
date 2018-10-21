@@ -7,10 +7,12 @@ from torch.utils import data
 from ignite import engine
 from ignite import metrics
 from ignite.engine import Events
+from ignite.contrib.handlers import ProgressBar
 import numpy as np
-from tqdm import tqdm
 
 from utils import data_utils
+from utils.ignite_utils import Identity, Average
+
 
 useful_columns = [
     'ddf',
@@ -60,7 +62,7 @@ def get_model(n_features):
     return model
 
 
-def get_data_loaders(batch_size, val_split=0.2):
+def get_data_loaders(batch_size, val_split):
     # Here, we use the kaggle test set to add data
     # It does not have the targets class, but some rows have hostgal_specz: we use those
     # This represents a lot more data than in the train set
@@ -76,52 +78,47 @@ def get_data_loaders(batch_size, val_split=0.2):
     return train_loader, val_loader
 
 
-def train_model():
-    train_set, val_set = get_data_loaders(batch_size=128, val_split=0.2)
-
+def get_engines(learning_rate=0.01):
     # We remove 1 because of the target column
     model = get_model(n_features=len(useful_columns) - 1)
-    optimizer = optim.Adam(model.parameters(), lr=0.01)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     loss = nn.MSELoss()
 
     trainer = engine.create_supervised_trainer(model, optimizer, loss)
     evaluator = engine.create_supervised_evaluator(model, metrics={
         'mae': metrics.MeanAbsoluteError(),
-        'loss': metrics.Loss(loss)
+        'loss': metrics.Loss(loss),
+        'avg': metrics.RunningAverage(metrics.Loss(loss))
     })
 
-    global progress_bar
-    progress_bar = tqdm(total=len(train_set.dataset))
+    # workaround for using the ProgressBar with training loss
+    Identity().attach(trainer, 'loss')
+    Average().attach(trainer, 'avg_loss')
+    return trainer, evaluator
 
-    @trainer.on(Events.ITERATION_COMPLETED)
-    def log_training_loss(trainer):
-        global progress_bar
-        progress_bar.update(trainer.state.dataloader.batch_size)
-        progress_bar.set_postfix_str('Loss: {:.3f}'.format(trainer.state.output))
 
-    @trainer.on(Events.EPOCH_STARTED)
-    def set_progress_desc(trainer):
-        global progress_bar
-        progress_bar.set_description_str(f'Epoch {trainer.state.epoch}')
+def assign_event_handlers(trainer, evaluator, val_set):
+    pbar = ProgressBar()
+    pbar.attach(trainer, ['loss'])
 
     @trainer.on(Events.EPOCH_COMPLETED)
-    def log_training_results(trainer):
-        global progress_bar
-        progress_bar = tqdm(total=len(train_set.dataset))
-        evaluator.run(train_set)
-        metrics = evaluator.state.metrics
-        print("\nTraining Results - Epoch: {}  Avg loss: {:.3f}"
-              .format(trainer.state.epoch, metrics['loss']))
+    def log_training_results(engine):
+        print("\nTraining Results - Epoch: {} : Avg loss: {:.3f}"
+              .format(trainer.state.epoch, trainer.state.metrics['avg_loss']))
 
     @trainer.on(Events.EPOCH_COMPLETED)
-    def log_validation_results(trainer):
+    def log_validation_results(engine):
         evaluator.run(val_set)
-        metrics = evaluator.state.metrics
+        metrics_eval = evaluator.state.metrics
         print("Validation Results - Epoch: {} Avg loss: {:.3f}, Avg abs. error: {:.2f}"
-              .format(trainer.state.epoch, metrics['loss'], metrics['mae']))
-
-    trainer.run(train_set, max_epochs=3)
+              .format(trainer.state.epoch, metrics_eval['loss'], metrics_eval['mae']))
 
 
 if __name__ == '__main__':
-    train_model()
+    train_set, val_set = get_data_loaders(batch_size=128, val_split=0.3)
+
+    train, eval = get_engines(learning_rate=0.02)
+    assign_event_handlers(train, eval, val_set)
+
+    train.run(train_set, max_epochs=30)
+
