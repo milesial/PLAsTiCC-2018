@@ -8,7 +8,9 @@ from ignite import engine
 from ignite import metrics
 from ignite.engine import Events
 from ignite.contrib.handlers import ProgressBar
+from ignite.handlers import ModelCheckpoint, EarlyStopping
 import numpy as np
+import os
 
 from utils import data_utils
 from utils.ignite_utils import Identity, Average
@@ -54,10 +56,12 @@ class RedshiftDataset(data.Dataset):
 
 def get_model(n_features):
     model = nn.Sequential(
-        nn.Linear(n_features, 20),
-        nn.Linear(20, 20),
-        nn.LeakyReLU(),
-        nn.Linear(20, 1),
+        nn.Linear(n_features, 30),
+        nn.Linear(30, 30),
+        nn.PReLU(),
+        nn.Linear(30, 30),
+        nn.PReLU(),
+        nn.Linear(30, 1),
     )
     return model
 
@@ -101,6 +105,9 @@ def assign_event_handlers(trainer, evaluator, val_set):
     pbar = ProgressBar()
     pbar.attach(trainer, ['loss'])
 
+    early_stop = EarlyStopping(patience=2, score_function=lambda e: -e.state.metrics['loss'], trainer=trainer)
+    evaluator.add_event_handler(Events.COMPLETED, early_stop)
+
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_training_results(engine):
         print("\nTraining Results - Epoch: {} : Avg loss: {:.3f}"
@@ -117,8 +124,8 @@ def assign_event_handlers(trainer, evaluator, val_set):
 if __name__ == '__main__':
     train_set, val_set = get_data_loaders(batch_size=128, val_split=0.3)
 
-    train, eval = get_engines(learning_rate=0.02)
+    train, eval = get_engines(learning_rate=0.01)
     assign_event_handlers(train, eval, val_set)
 
-    train.run(train_set, max_epochs=30)
+    train.run(train_set, max_epochs=20)
 
