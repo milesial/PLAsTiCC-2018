@@ -15,7 +15,6 @@ import os
 from utils import data_utils
 from utils.ignite_utils import Identity, Average
 
-
 useful_columns = [
     'ddf',
     'distmod',
@@ -128,4 +127,3 @@ if __name__ == '__main__':
     assign_event_handlers(train, eval, val_set)
 
     train.run(train_set, max_epochs=20)
-

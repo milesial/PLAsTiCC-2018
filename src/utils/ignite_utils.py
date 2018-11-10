@@ -7,6 +7,7 @@ class Identity(metrics.Metric):
     """ Identity metric that updates the state og the engine every iteration, like RunningAverage,
     and not like all the others metrics. This allows to use ProgressBar for displaying the
     training loss """
+
     def reset(self):
         self.output = None
 
@@ -24,6 +25,7 @@ class Identity(metrics.Metric):
 
 class Average(metrics.Metric):
     """ Average all outputs of the process method """
+
     def reset(self):
         self.count = 0
         self.sum = 0
