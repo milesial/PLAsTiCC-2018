@@ -1,7 +1,6 @@
 import numpy as np
 from cesium.featurize import featurize_time_series
 
-from utils.data_utils import target_to_one_hot
 from utils.data_utils import get_train_objects
 
 
@@ -29,7 +28,15 @@ def featurize_train_object(time_series, metadata):
     features_vector = np.hstack(features)
     full_vector = np.hstack([features_vector, metadata.drop('target').values])
     full_vector[np.isnan(full_vector)] = 0
-    return full_vector, target_to_one_hot(metadata['target'])
+    return full_vector, metadata['target']
+
+
+def featurize_test_object(time_series, metadata):
+    features = get_features(time_series)
+    features_vector = np.hstack(features)
+    full_vector = np.hstack([features_vector, metadata.values])
+    full_vector[np.isnan(full_vector)] = 0
+    return full_vector
 
 
 def get_featurized_train_objects():
