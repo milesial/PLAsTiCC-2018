@@ -41,5 +41,5 @@ def featurize_test_object(time_series, metadata):
 
 def get_featurized_train_objects():
     train_set = get_train_objects()
-    train_set = map(lambda o: featurize_train_object(o[0], o[1]), train_set)
+    train_set = map(lambda o: featurize_train_object(o[1], o[2]), train_set)
     return train_set

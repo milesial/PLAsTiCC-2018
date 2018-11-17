@@ -3,6 +3,7 @@
 import pandas as pd
 import numpy as np
 from os.path import dirname, join
+from glob import glob
 
 from utils.constants import CLASSES
 
@@ -34,10 +35,14 @@ def get_test_set(csv_id) -> pd.DataFrame:
     return read_csv_and_fill_na(path)
 
 
+def get_num_test_shards():
+    return len(glob(join(DATA_DIR, 'test_set_*.csv')))
+
+
 def get_objects(df, df_meta):
     """
     From the time series df and the metadata df, yields objects one by one with:
-
+      - The object id
       - A time series for each passband as dataframes
       - The metadata row as a one-row dataframe
     """
@@ -48,7 +53,7 @@ def get_objects(df, df_meta):
         passband_ts = [frame.drop(['object_id', 'passband'], axis=1)
                        for _, frame in o_frame.groupby('passband')]
 
-        yield passband_ts, meta_row
+        yield oid, passband_ts, meta_row
 
 
 def get_test_objects(csv_id):
