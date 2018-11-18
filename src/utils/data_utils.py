@@ -36,7 +36,7 @@ def get_test_set(csv_id) -> pd.DataFrame:
 
 
 def get_num_test_shards():
-    return len(glob(join(DATA_DIR, 'test_set_*.csv')))
+    return len(glob(join(DATA_DIR, 'test_set_*[0-9].csv')))
 
 
 def get_objects(df, df_meta):
@@ -46,14 +46,13 @@ def get_objects(df, df_meta):
       - A time series for each passband as dataframes
       - The metadata row as a one-row dataframe
     """
-    for oid, o_frame in df.groupby('object_id'):
+    for oid, o_frame in df.groupby('object_id', sort=False):
         meta_row = df_meta[df_meta['object_id'] == oid]
         meta_row = meta_row.drop('object_id', axis=1).squeeze()
-
         passband_ts = [frame.drop(['object_id', 'passband'], axis=1)
-                       for _, frame in o_frame.groupby('passband')]
+                       for _, frame in o_frame.groupby('passband', sort=False)]
 
-        yield oid, passband_ts, meta_row
+        yield int(oid), passband_ts, meta_row
 
 
 def get_test_objects(csv_id):
