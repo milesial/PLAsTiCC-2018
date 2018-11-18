@@ -17,6 +17,10 @@ def split_test_set(csv_path, num_files=8):
 
     with open(csv_path, 'r') as csvfile, tqdm(total=NUM_TEST_ROWS, unit_scale=True) as pbar:
         reader = csv.reader(csvfile)
+        header = list(next(reader))
+        for w in writers:
+            w.writerow(header)
+
         pbar.set_postfix_str(f'({current_writer+1} out of {num_files})')
         for i_row, row in enumerate(reader):
             if i_row == chunk_size * (current_writer + 1):
@@ -34,4 +38,4 @@ def split_test_set(csv_path, num_files=8):
 
 
 if __name__ == '__main__':
-    split_test_set('../../data/test_set.csv', num_files=8)
+    split_test_set('../../data/test_set.csv', num_files=100)
