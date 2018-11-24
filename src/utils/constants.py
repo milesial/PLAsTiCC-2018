@@ -19,3 +19,5 @@ METADATA_COLUMNS = [
     'mwebv',
     'target'
 ]
+
+NUM_PASSBANDS = 6
