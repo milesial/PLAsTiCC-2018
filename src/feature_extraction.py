@@ -27,11 +27,8 @@ FEATURES = [
     'flux_percentile_ratio_mid80',
     'percent_close_to_median',
     'percent_difference_flux_percentile',
-    'skew',
     'std',
-    'freq1_freq',
-    'freq1_lambda',
-    'freq_varrat',
+    'skew'
 ]
 
 
@@ -117,7 +114,7 @@ def featurize_and_save_test_set(n_workers, out_csv):
                 writer.writerow(item)
                 pbar.update(1)
 
-        r.wait()
+        r.get()
 
 
 def featurize_and_save_train_set(n_workers, out_csv):

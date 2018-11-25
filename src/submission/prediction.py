@@ -1,14 +1,17 @@
 import csv
-import numpy as np
-from tqdm import tqdm
+from multiprocessing import Manager
 from multiprocessing import Pool
 from multiprocessing import Process
-from multiprocessing import Manager
+
+import numpy as np
+from tqdm import tqdm
 
 from utils.constants import CLASSES
+from utils.constants import EXTRA_GAL_CLASS_IDX
+from utils.constants import GAL_CLASS_IDX
 from utils.constants import NUM_TEST_EXAMPLES
-from utils.data_utils import get_test_objects
 from utils.data_utils import get_num_test_shards
+from utils.data_utils import get_test_objects
 
 
 def predict_test_probs_for_shard(queue, shard_id, prepare_data_fn, model_fn):
@@ -16,6 +19,14 @@ def predict_test_probs_for_shard(queue, shard_id, prepare_data_fn, model_fn):
         inp = prepare_data_fn(passband_ts, meta_row)
         output = model_fn(inp.reshape(1, -1))
         output = np.array(output, dtype=np.float16).squeeze()
+
+        # Adjust for knowledge about galactic / extragalactic
+        is_galactic = (meta_row['hostgal_specz'] == 0)
+        if is_galactic:
+            output[EXTRA_GAL_CLASS_IDX] = 0
+        else:
+            output[GAL_CLASS_IDX] = 0
+        output = output / output.sum()  # renormalize
         output = [oid, *output]
         queue.put(output)
 

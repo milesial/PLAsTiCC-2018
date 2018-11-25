@@ -35,6 +35,8 @@ if __name__ == '__main__':
     from os.path import join, dirname, exists
 
     from feature_extraction import get_featurized_train_objects
+    from submission.prediction import predict_test_probs
+    from feature_extraction import featurize_test_object
 
     model_nickname = 'gradient_boosting_v2_features'
 
@@ -76,7 +78,7 @@ if __name__ == '__main__':
                                            param_distributions=param_dist,
                                            n_iter=10,
                                            n_jobs=4,
-                                           cv=10)
+                                           cv=3)
 
         random_search.fit(X, y)
         report(random_search.cv_results_)
@@ -86,8 +88,9 @@ if __name__ == '__main__':
         # print('train_accuracy', model.score(X_train, y_train))
         # print('val_accuracy', model.score(X_val, y_val))
 
-        joblib.dump(model, checkpoint_path)
+        best_model = random_search.best_estimator_
+        joblib.dump(best_model, checkpoint_path)
     else:
-        model = joblib.load(checkpoint_path)
+        best_model = joblib.load(checkpoint_path)
 
-    # predict_test_probs(featurize_test_object, model.predict_proba, model_nickname + '.csv', 10)
+    predict_test_probs(featurize_test_object, best_model.predict_proba, model_nickname + '.csv', 10)
